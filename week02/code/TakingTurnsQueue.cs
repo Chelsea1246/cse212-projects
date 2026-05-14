@@ -40,16 +40,24 @@ public class TakingTurnsQueue
         else
         {
             Person person = _people.Dequeue();
-            if (person.Turns > 1)
+            // Infinite turns if turns is 0 or less, otherwise decrement turns and add back to queue if they have more turns
+            if (person.Turns <= 0)
+            
             {
-                person.Turns -= 1;
                 _people.Enqueue(person);
+            }
+            else
+            {
+                person.Turns--;
+                if (person.Turns > 0)
+                {
+                    _people.Enqueue(person);
+                }
             }
 
             return person;
         }
     }
-
     public override string ToString()
     {
         return _people.ToString();
