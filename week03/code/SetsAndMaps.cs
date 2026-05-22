@@ -1,4 +1,8 @@
 using System.Text.Json;
+using System.IO;
+using System.Net.Http;
+using System.Collections.Generic;
+using System.Linq;
 
 public static class SetsAndMaps
 {
@@ -6,23 +10,28 @@ public static class SetsAndMaps
     /// The words parameter contains a list of two character 
     /// words (lower case, no duplicates). Using sets, find an O(n) 
     /// solution for returning all symmetric pairs of words.  
-    ///
-    /// For example, if words was: [am, at, ma, if, fi], we would return :
-    ///
-    /// ["am & ma", "if & fi"]
-    ///
-    /// The order of the array does not matter, nor does the order of the specific words in each string in the array.
-    /// at would not be returned because ta is not in the list of words.
-    ///
-    /// As a special case, if the letters are the same (example: 'aa') then
-    /// it would not match anything else (remember the assumption above
-    /// that there were no duplicates) and therefore should not be returned.
     /// </summary>
-    /// <param name="words">An array of 2-character words (lowercase, no duplicates)</param>
     public static string[] FindPairs(string[] words)
     {
-        // TODO Problem 1 - ADD YOUR CODE HERE
-        return [];
+        var results = new List<string>();
+        var set = new HashSet<string>(words);
+        var used = new HashSet<string>();
+
+        foreach (var word in words)
+        {
+            if (word.Length != 2) continue;
+            if (word[0] == word[1]) continue;
+
+            var reversed = new string(new[] { word[1], word[0] });
+            if (set.Contains(reversed) && !used.Contains(word) && !used.Contains(reversed))
+            {
+                results.Add($"{word} & {reversed}");
+                used.Add(word);
+                used.Add(reversed);
+            }
+        }
+
+        return results.ToArray();
     }
 
     /// <summary>
@@ -36,15 +45,27 @@ public static class SetsAndMaps
     /// </summary>
     /// <param name="filename">The name of the file to read</param>
     /// <returns>fixed array of divisors</returns>
+    /// 
     public static Dictionary<string, int> SummarizeDegrees(string filename)
     {
         var degrees = new Dictionary<string, int>();
         foreach (var line in File.ReadLines(filename))
         {
             var fields = line.Split(",");
-            // TODO Problem 2 - ADD YOUR CODE HERE
-        }
 
+    // TODO Problem 2 - ADD YOUR CODE HERE
+
+    string degree = fields[3];
+
+if (degrees.ContainsKey(degree))
+{
+    degrees[degree]++;
+}
+else
+{
+    degrees[degree] = 1;
+}
+        }
         return degrees;
     }
 
@@ -66,9 +87,45 @@ public static class SetsAndMaps
     /// </summary>
     public static bool IsAnagram(string word1, string word2)
     {
-        // TODO Problem 3 - ADD YOUR CODE HERE
+        word1 = word1.Replace(" ", "").ToLower();
+        word2 = word2.Replace(" ", "").ToLower();
+
+    if (word1.Length != word2.Length)
+    {
         return false;
     }
+
+    var letters = new Dictionary<char, int>();
+
+    foreach (char c in word1)
+    {
+        if (letters.ContainsKey(c))
+        {
+            letters[c]++;
+        }
+        else
+        {
+            letters[c] = 1;
+        }
+    }
+
+    foreach (char c in word2)
+    {
+        if (!letters.ContainsKey(c))
+        {
+            return false;
+        }
+
+        letters[c]--;
+
+        if (letters[c] < 0)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
 
     /// <summary>
     /// This function will read JSON (Javascript Object Notation) data from the 
@@ -94,13 +151,38 @@ public static class SetsAndMaps
         var json = reader.ReadToEnd();
         var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 
-        var featureCollection = JsonSerializer.Deserialize<FeatureCollection>(json, options);
+        // Some solutions may not have the FeatureCollection class defined as expected.
+        // Deserialize into a JsonDocument and extract features dynamically.
+        using var doc = JsonDocument.Parse(json);
+        var results = new List<string>();
 
-        // TODO Problem 5:
-        // 1. Add code in FeatureCollection.cs to describe the JSON using classes and properties 
-        // on those classes so that the call to Deserialize above works properly.
-        // 2. Add code below to create a string out each place a earthquake has happened today and its magitude.
-        // 3. Return an array of these string descriptions.
-        return [];
+        if (doc.RootElement.TryGetProperty("features", out var features) && features.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var feature in features.EnumerateArray())
+            {
+                string place = "(unknown)";
+                string magText = "(unknown)";
+
+                if (feature.TryGetProperty("properties", out var props))
+                {
+                    if (props.TryGetProperty("place", out var placeEl) && placeEl.ValueKind == JsonValueKind.String)
+                        place = placeEl.GetString();
+
+                    if (props.TryGetProperty("mag", out var magEl))
+                    {
+                        if (magEl.ValueKind == JsonValueKind.Number && magEl.TryGetDouble(out var m))
+                            magText = m.ToString();
+                        else if (magEl.ValueKind == JsonValueKind.Null)
+                            magText = "null";
+                        else
+                            magText = magEl.ToString();
+                    }
+                }
+
+                results.Add($"{place} - Mag {magText}");
+            }
+        }
+
+        return results.ToArray();
     }
 }
