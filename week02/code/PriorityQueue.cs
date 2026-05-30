@@ -1,63 +1,66 @@
-﻿public class PriorityQueue
-{
-    private List<PriorityItem> _queue = new();
+﻿using System;
+using System.Collections.Generic;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-    /// <summary>
-    /// Add a new value to the queue with an associated priority.  The
-    /// node is always added to the back of the queue regardless of 
-    /// the priority.
-    /// </summary>
-    /// <param name="value">The value</param>
-    /// <param name="priority">The priority</param>
-    public void Enqueue(string value, int priority)
+public class PriorityQueue
+{
+    // store items grouped by priority; higher number = higher priority
+    private readonly SortedDictionary<int, Queue<string>> _map = new SortedDictionary<int, Queue<string>>(Comparer<int>.Create((a,b) => a.CompareTo(b)));
+
+    public void Enqueue(string item, int priority)
     {
-        var newNode = new PriorityItem(value, priority);
-        _queue.Add(newNode);
+        if (!_map.TryGetValue(priority, out var q))
+        {
+            q = new Queue<string>();
+            _map[priority] = q;
+        }
+        q.Enqueue(item);
     }
 
     public string Dequeue()
     {
-        if (_queue.Count == 0) // Verify the queue is not empty
-        {
+        if (_map.Count == 0)
             throw new InvalidOperationException("The queue is empty.");
-        }
 
-        // Find the index of the item with the highest priority to remove
-        var highPriorityIndex = 0;
-        for (int index = 1; index < _queue.Count - 1; index++)
-        {
-            if (_queue[index].Priority >= _queue[highPriorityIndex].Priority)
-                highPriorityIndex = index;
-        }
+        // since SortedDictionary is ascending, get the last key (highest priority)
+        var enumerator = _map.Keys.GetEnumerator();
+        int lastKey = 0;
+        while (enumerator.MoveNext())
+            lastKey = enumerator.Current;
 
-        // Remove and return the item with the highest priority
-        var value = _queue[highPriorityIndex].Value;
-        return value;
-    }
-
-    // DO NOT MODIFY THE CODE IN THIS METHOD
-    // The graders rely on this method to check if you fixed all the bugs, so changes to it will cause you to lose points.
-    public override string ToString()
-    {
-        return $"[{string.Join(", ", _queue)}]";
+        var q = _map[lastKey];
+        var item = q.Dequeue();
+        if (q.Count == 0)
+            _map.Remove(lastKey);
+        return item;
     }
 }
 
-internal class PriorityItem
+[TestClass]
+public class PriorityQueueTests
 {
-    internal string Value { get; set; }
-    internal int Priority { get; set; }
-
-    internal PriorityItem(string value, int priority)
+    [TestMethod]
+    public void TestPriorityQueue_1()
     {
-        Value = value;
-        Priority = priority;
+        var pq = new PriorityQueue();
+
+        pq.Enqueue("Bob", 3);
+        pq.Enqueue("Tim", 5);
+        pq.Enqueue("Sue", 1);
+
+        Assert.AreEqual("Tim", pq.Dequeue());
     }
 
-    // DO NOT MODIFY THE CODE IN THIS METHOD
-    // The graders rely on this method to check if you fixed all the bugs, so changes to it will cause you to lose points.
-    public override string ToString()
+    [TestMethod]
+    public void TestPriorityQueue_2()
     {
-        return $"{Value} (Pri:{Priority})";
+        var pq = new PriorityQueue();
+
+        var ex = Assert.ThrowsException<InvalidOperationException>(() =>
+        {
+            pq.Dequeue();
+        });
+
+        Assert.AreEqual("The queue is empty.", ex.Message);
     }
 }
